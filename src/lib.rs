@@ -1,13 +1,22 @@
-use image::{GenericImageView, ImageReader, Pixel};
 use std::fs::OpenOptions;
+
+use clap::Parser;
+use image::{GenericImageView, ImageReader, Pixel};
 use stl_io::{Normal, Triangle, Vertex};
 
 const IMAGE_MAX_SIZE: f32 = 100.0;
 const IMAGE_MIN_HEIGHT: f32 = 0.2;
 const IMAGE_MAX_HEIGHT: f32 = 8.2;
 
-pub fn convert_image_to_3d_model() {
-    let img = ImageReader::open("golden_input.bmp")
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+pub struct Args {
+    #[arg(short, long)]
+    pub input_file: String,
+}
+
+pub fn convert_image_to_3d_model(args: &Args) {
+    let img = ImageReader::open(&args.input_file)
         .unwrap()
         .decode()
         .unwrap();

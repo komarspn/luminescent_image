@@ -1,3 +1,6 @@
+use clap::Parser;
+
 fn main() {
-    luminescent_image::convert_image_to_3d_model();
+    let args = luminescent_image::Args::parse();
+    luminescent_image::convert_image_to_3d_model(&args);
 }
