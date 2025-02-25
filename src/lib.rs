@@ -4,7 +4,6 @@ use clap::Parser;
 use image::{GenericImageView, ImageReader, Pixel};
 use stl_io::{Normal, Triangle, Vertex};
 
-const IMAGE_MAX_SIZE: f32 = 100.0;
 const IMAGE_MIN_HEIGHT: f32 = 0.2;
 const IMAGE_MAX_HEIGHT: f32 = 8.2;
 
@@ -13,6 +12,12 @@ const IMAGE_MAX_HEIGHT: f32 = 8.2;
 pub struct Args {
     #[arg(short, long)]
     pub input_file: String,
+
+    #[arg(short, long)]
+    pub output_file: String,
+
+    #[arg(short = 's', long, default_value_t = 150.0)]
+    pub output_stl_max_size: f32,
 }
 
 pub fn convert_image_to_3d_model(args: &Args) {
@@ -31,18 +36,18 @@ pub fn convert_image_to_3d_model(args: &Args) {
     let height = img.height();
 
     coordinates = revert_z_coordinates(coordinates);
-    coordinates = scale_coordinates(coordinates, width, height);
+    coordinates = scale_coordinates(coordinates, width, height, args.output_stl_max_size);
     coordinates = move_up_coordinates(coordinates);
 
     let mut triangles = convert_to_triangles(&coordinates, width, height);
-    triangles.extend(generate_base(width, height));
+    triangles.extend(generate_base(width, height, args.output_stl_max_size));
     triangles.extend(generate_sides(&coordinates, width, height));
 
     let mut file = OpenOptions::new()
         .write(true)
         .create(true)
         .truncate(true)
-        .open("test.stl")
+        .open(&args.output_file)
         .unwrap();
 
     stl_io::write_stl(&mut file, triangles.iter()).unwrap();
@@ -55,9 +60,14 @@ fn revert_z_coordinates(mut coordinates: Vec<[f32; 3]>) -> Vec<[f32; 3]> {
     coordinates
 }
 
-fn scale_coordinates(coordinates: Vec<[f32; 3]>, width: u32, height: u32) -> Vec<[f32; 3]> {
-    let scale_x = IMAGE_MAX_SIZE / width as f32;
-    let scale_y = IMAGE_MAX_SIZE / height as f32;
+fn scale_coordinates(
+    coordinates: Vec<[f32; 3]>,
+    width: u32,
+    height: u32,
+    output_stl_max_size: f32,
+) -> Vec<[f32; 3]> {
+    let scale_x = output_stl_max_size / width as f32;
+    let scale_y = output_stl_max_size / height as f32;
     let scale_xy = scale_x.min(scale_y);
     let scale_z = (IMAGE_MAX_HEIGHT - IMAGE_MIN_HEIGHT) / 256.0;
 
@@ -98,10 +108,10 @@ fn convert_to_triangles(scale_coordinates: &[[f32; 3]], width: u32, height: u32)
     result
 }
 
-fn generate_base(width: u32, height: u32) -> Vec<Triangle> {
+fn generate_base(width: u32, height: u32, output_stl_max_size: f32) -> Vec<Triangle> {
     let width = width as f32;
     let height = height as f32;
-    let scale_xy = (IMAGE_MAX_SIZE / width).min(IMAGE_MAX_SIZE / height);
+    let scale_xy = (output_stl_max_size / width).min(output_stl_max_size / height);
 
     let normal = Normal::new([0.0, 0.0, -1.0]);
     let p1 = Vertex::new([0.0, 0.0, 0.0]);

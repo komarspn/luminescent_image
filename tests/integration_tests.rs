@@ -10,6 +10,8 @@ mod tests {
         fs::remove_file("test.stl").unwrap_or_default();
         let args = Args {
             input_file: "tests/golden_input.bmp".to_string(),
+            output_file: "test.stl".to_string(),
+            output_stl_max_size: 100.0,
         };
 
         convert_image_to_3d_model(&args);
