@@ -25,6 +25,7 @@ pub fn convert_image_to_3d_model(args: &Args) {
         .unwrap()
         .decode()
         .unwrap();
+    let img = img.flipv();
     let img = img.resize(300, 300, image::imageops::FilterType::Nearest);
 
     let mut coordinates: Vec<[f32; 3]> = img
