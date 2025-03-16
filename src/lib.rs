@@ -2,10 +2,8 @@ use std::fs::OpenOptions;
 
 use clap::Parser;
 use image::{GenericImageView, ImageReader, Pixel};
+use serde::{Deserialize, Serialize};
 use stl_io::{Normal, Triangle, Vertex};
-
-const IMAGE_MIN_HEIGHT: f32 = 0.2;
-const IMAGE_MAX_HEIGHT: f32 = 8.2;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -20,13 +18,36 @@ pub struct Args {
     pub output_stl_max_size: f32,
 }
 
-pub fn convert_image_to_3d_model(args: &Args) {
+#[derive(Serialize, Deserialize)]
+pub struct Config {
+    image_min_height: f32,
+    image_max_height: f32,
+    image_resolution: f32,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            image_min_height: 0.2,
+            image_max_height: 8.2,
+            image_resolution: 0.1,
+        }
+    }
+}
+
+pub fn convert_image_to_3d_model(args: &Args, config: &Config) {
     let img = ImageReader::open(&args.input_file)
         .unwrap()
         .decode()
         .unwrap();
     let img = img.flipv();
-    let img = img.resize(300, 300, image::imageops::FilterType::Nearest);
+
+    let max_size_in_pixels = (args.output_stl_max_size / config.image_resolution) as u32;
+    let img = img.resize(
+        max_size_in_pixels,
+        max_size_in_pixels,
+        image::imageops::FilterType::Nearest,
+    );
 
     let mut coordinates: Vec<[f32; 3]> = img
         .pixels()
@@ -36,9 +57,11 @@ pub fn convert_image_to_3d_model(args: &Args) {
     let width = img.width();
     let height = img.height();
 
+    let scale = config.image_resolution;
+
     coordinates = revert_z_coordinates(coordinates);
-    coordinates = scale_coordinates(coordinates, width, height, args.output_stl_max_size);
-    coordinates = move_up_coordinates(coordinates);
+    coordinates = scale_coordinates(coordinates, scale, config);
+    coordinates = move_up_coordinates(coordinates, config);
 
     let mut triangles = convert_to_triangles(&coordinates, width, height);
     triangles.extend(generate_base(width, height, args.output_stl_max_size));
@@ -61,27 +84,19 @@ fn revert_z_coordinates(mut coordinates: Vec<[f32; 3]>) -> Vec<[f32; 3]> {
     coordinates
 }
 
-fn scale_coordinates(
-    coordinates: Vec<[f32; 3]>,
-    width: u32,
-    height: u32,
-    output_stl_max_size: f32,
-) -> Vec<[f32; 3]> {
-    let scale_x = output_stl_max_size / width as f32;
-    let scale_y = output_stl_max_size / height as f32;
-    let scale_xy = scale_x.min(scale_y);
-    let scale_z = (IMAGE_MAX_HEIGHT - IMAGE_MIN_HEIGHT) / 256.0;
+fn scale_coordinates(coordinates: Vec<[f32; 3]>, scale: f32, config: &Config) -> Vec<[f32; 3]> {
+    let scale_z = (config.image_max_height - config.image_min_height) / 256.0;
 
     coordinates
         .into_iter()
-        .map(|[x, y, z]| [x * scale_xy, y * scale_xy, z * scale_z])
+        .map(|[x, y, z]| [x * scale, y * scale, z * scale_z])
         .collect()
 }
 
-fn move_up_coordinates(mut coordinates: Vec<[f32; 3]>) -> Vec<[f32; 3]> {
+fn move_up_coordinates(mut coordinates: Vec<[f32; 3]>, config: &Config) -> Vec<[f32; 3]> {
     coordinates
         .iter_mut()
-        .for_each(|point| point[2] += IMAGE_MIN_HEIGHT);
+        .for_each(|point| point[2] += config.image_min_height);
     coordinates
 }
 

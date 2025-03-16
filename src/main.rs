@@ -2,5 +2,7 @@ use clap::Parser;
 
 fn main() {
     let args = luminescent_image::Args::parse();
-    luminescent_image::convert_image_to_3d_model(&args);
+    let config: luminescent_image::Config =
+        confy::load("luminescent_image", None).unwrap_or_default();
+    luminescent_image::convert_image_to_3d_model(&args, &config);
 }

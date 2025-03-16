@@ -13,8 +13,9 @@ mod tests {
             output_file: "test.stl".to_string(),
             output_stl_max_size: 100.0,
         };
+        let config = luminescent_image::Config::default();
 
-        convert_image_to_3d_model(&args);
+        convert_image_to_3d_model(&args, &config);
 
         assert!(compare_files("test.stl", "tests/golden_output.stl"));
     }
