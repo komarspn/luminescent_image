@@ -7,17 +7,21 @@ mod tests {
 
     #[test]
     fn test_convert_image_to_3d_model() {
-        fs::remove_file("test.stl").unwrap_or_default();
+        let tmp_dir = tempfile::tempdir().unwrap();
+        let output_file_path = tmp_dir.path().join("test.stl");
         let args = Args {
             input_file: "tests/golden_input.bmp".to_string(),
-            output_file: "test.stl".to_string(),
+            output_file: output_file_path.to_str().unwrap().to_string(),
             output_stl_max_size: 100.0,
         };
         let config = luminescent_image::Config::default();
 
         convert_image_to_3d_model(&args, &config);
 
-        assert!(compare_files("test.stl", "tests/golden_output.stl"));
+        assert!(compare_files(
+            output_file_path.to_str().unwrap(),
+            "tests/golden_output.stl"
+        ));
     }
 
     fn compare_files(path1: &str, path2: &str) -> bool {
